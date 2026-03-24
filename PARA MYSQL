@@ -1,0 +1,23 @@
+CREATE DATABASE mural_db;
+
+USE mural_db;
+
+CREATE TABLE mensagens(
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    texto VARCHAR(255) NOT NULL,
+    data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- Adicionando a coluna 'autor' logo após o 'id'
+ALTER TABLE mensagens 
+ADD COLUMN autor VARCHAR(50) NOT NULL DEFAULT 'Anônimo' AFTER id;
+
+SELECT texto,autor, DATE_FORMAT(data_envio, '%H:%i:%s') as hora FROM mensagens ORDER BY id DESC LIMIT 15 
+
+-- CRIANDO USUARIO --
+CREATE USER 'usuario_cliente'@'localhost' IDENTIFIED BY '123456';
+
+-- dei permissão para ler, atualizar e inserir a tabela 'mensagens' no banco 'mural_db'
+GRANT SELECT, UPDATE, INSERT ON mural_db.mensagens TO 'usuario_cliente'@'localhost';
+
+-- apliquei as permissões imediatamente--
+FLUSH PRIVILEGES;

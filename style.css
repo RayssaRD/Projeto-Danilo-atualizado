@@ -1,0 +1,16 @@
+
+body { 
+    background-color: #080808; 
+    color: #ffffff; 
+}
+
+.card-msg { 
+    background-color: #333232; 
+    border-left: 5px solid #ffc107; 
+}
+/* Alvo: o texto de dica (placeholder) de todos os inputs */
+input::placeholder {
+    color: #888888 !important; /* Um cinza claro que dê leitura */
+    opacity: 1; /* Garante que o navegador não deixe o texto transparente */
+}
+ 

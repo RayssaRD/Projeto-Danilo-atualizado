@@ -1,102 +1,79 @@
 <?php
-        session_start();
-        // PASSO 2: O Bloqueio de Segurança
-// Verificamos se a chave 'id_usuario' NÃO está definida na sessão
+session_start();
 if (!isset($_SESSION['id_usuario'])) {
-    
-    // 1. Prepara a resposta de erro em formato JSON
-    echo json_encode([
-        'status' => 'erro', 
-        'mensagem' => 'Acesso Negado: Você precisa estar logado para ver isso!'
-    ]);
-
-    // 2. O EXIT é vital: ele mata o script na hora e impede que o resto 
-    // do seu código (como o INSERT ou SELECT) seja executado.
-    exit; 
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Acesso Negado!']);
+    exit;
 }
-        //salvar.php
-        require "conexao.php";
+$autor_nome = $_SESSION['nome_usuario']; // Pega o nome que o login guardou
+        //conexao
+    require "conexao.php";
 
         // Verifica se o texto chegou via POST if
 
-        if (isset($_POST['texto']) && !empty(trim($_POST['texto'])) && isset($_POST['autor'])) {
+        //if (isset($_POST['texto']) && !empty(trim($_POST['texto'])) && isset($_POST['autor'])) {
 
-            $texto = trim($_POST['texto']);
+           // $texto = trim($_POST['texto']);
 
-            $autor = trim($_POST['autor']);
+            //$autor = trim($_POST['autor']);
 
             //1.SANITIZAÇÃO: o "Anti-XSS". Remove espaços e neutraliza tags HTML.
 
-            $autor = htmlspecialchars(trim($_POST['autor']), ENT_QUOTES,'UTF-8');
+           // $autor = htmlspecialchars(trim($_POST['autor']), ENT_QUOTES,'UTF-8');
 
-            $texto = htmlspecialchars(trim($_POST['texto']), ENT_QUOTES,'UTF-8');
+           // $texto = htmlspecialchars(trim($_POST['texto']), ENT_QUOTES,'UTF-8');//
+            // Verifica se o texto chegou via POST
+    if (isset($_POST['texto'])) {
 
-        // 2. FILTRO DE PALAVRAS (Missão 1)
+        // --- A SUBSTITUIÇÃO (A SACADA DE SEGURANÇA) ---
+        // Pegamos o texto do formulário, mas o NOME vem da SESSÃO (inviolável)
+        $texto_puro = trim($_POST['texto']);
+        $autor_nome = $_SESSION['nome_usuario']; 
 
-        $proibidas = ['bobo', 'feio', 'chato'];
-
-        $texto = str_ireplace($proibidas, '***', $texto);
-
-        // 3. VALIDAÇÃO DE TAMANHO (Missão 2)
-
-        $texto = $_POST['texto'];
-
-        // Verifica se a contagem real é maior que 150
-        if (mb_strlen($texto, 'UTF-8') > 150) {
-            echo "Erro: Sua mensagem é muito longa!";
+        // 3. VALIDAÇÃO DE TAMANHO (BACK-END)
+        // Verificamos o texto bruto ANTES de qualquer filtro
+        if (mb_strlen($texto_puro, 'UTF-8') > 150) {
+            echo json_encode(['status' => 'erro', 'mensagem' => 'Atenção: Sua mensagem passou do limite de 150 caracteres.']);
             exit;
         }
 
+            // 4. VERIFICAÇÃO DE DADOS: Agora só precisamos do 'texto' via POST
+    if (isset($_POST['texto']) && !empty(trim($_POST['texto']))) {
 
-        // 4. PERSISTÊNCIA (O resto do seu código...)
+        // A SUBSTITUIÇÃO: O autor não vem mais do formulário, vem da SESSÃO
+        $autor_nome = $_SESSION['nome_usuario']; 
+        $texto_bruto = $_POST['texto'];
 
+        // 5. VALIDAÇÃO DE TAMANHO (Missão 2): No texto bruto antes de filtrar
+        if (mb_strlen($texto_bruto, 'UTF-8') > 150) {
+            echo json_encode(['status' => 'erro', 'mensagem' => 'Atenção: Sua mensagem passou do limite de 150 caracteres.']);
+            exit;
+        }
+    }
 
-            //2. VALIDAÇÃO: Verifica se após a limpeza, os campos não ficaram vazios
+        // 6. FILTRO DE PALAVRAS (Missão 1): Suas palavras proibidas
+        $palavras_proibidas = ['bobo', 'feio', 'chato', 'boboca', 'ridiculo', 'merda', 'idiota', 'ameba'];
+        $texto_filtrado = str_ireplace($palavras_proibidas, '***', $texto_bruto);
 
-            if(empty($autor) || empty($texto)){
+        // 7. SANITIZAÇÃO (Anti-XSS): Limpando para o banco
+        $texto = htmlspecialchars(trim($texto_filtrado), ENT_QUOTES, 'UTF-8');
+        $autor = htmlspecialchars(trim($autor_nome), ENT_QUOTES, 'UTF-8');
 
-                // Retorna um erro amigável em formato JSON para o Front-end ler
-
-                echo json_encode(['status'=> "erro", 'mensagem' => "Atenção: Os campos não podem estar vazios."]);
-
-                exit;
-
-            }
-
-                // --- FILTRO DE PALAVRAS PROIBIDAS ---
-
-            $palavras_proibidas = ['bobo', 'feio', 'chato', 'boboca', 'ridiculo', 'merda', 'idiota', 'ameba',]; // Adicione quantas quiser
-
-            $substituicao = '***';
-
-            // O str_ireplace percorre o array e substitui na string $texto
-
-            $texto = str_ireplace($palavras_proibidas, $substituicao, $texto);
-
-            // ------------------------------------
-
-            // 3.PERSISTÊNCIA Prepara a query segura (Prepared Statements) para o Banco de Dados
-
-            $stmt = $pdo->prepare("INSERT INTO mensagens (texto,autor) VALUES (:texto,:autor)");
-
+        // 8. PERSISTÊNCIA: Inserindo no banco de dados
+        try {
+            $stmt = $pdo->prepare("INSERT INTO mensagens (texto, autor) VALUES (:texto, :autor)");
             $stmt->bindParam(":texto", $texto);
-
             $stmt->bindParam(":autor", $autor);
 
-            if($stmt->execute()) {
-
+            if ($stmt->execute()) {
                 echo json_encode(['status' => 'sucesso']);
-
             } else {
-
                 echo json_encode(['status' => 'erro', 'mensagem' => 'Erro interno ao salvar no banco de dados.']);
-
             }
+        } catch (PDOException $e) {
+            echo json_encode(['status' => 'erro', 'mensagem' => 'Erro no servidor: ' . $e->getMessage()]);
+        }
 
-        } else {
-
-                echo json_encode(['status' => 'erro', 'mensagem' => 'Requisição inválida.']);
-
-            }
-
+    } else {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Atenção: A mensagem não pode estar vazia.']);
+    }
 ?>

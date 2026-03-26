@@ -20,7 +20,7 @@ if($_SERVER['REQUEST_METHOD']=== 'POST'){
 
     try{
         //Prepared Statements: Preparação
-        $sql = "INSERT INTO usuarios(nome, email, senha) VALUES (:nome, :email, :senha)";
+        $sql = "INSERT INTO usuarios(autor, email, senha_hash) VALUES (:autor, :email, :senha)";
         $stmt = $pdo->prepare($sql);
 
         // Associando os valores reais aos "apelidos". Vamos enviar a $senhaCriptografada, não a senha pura!
@@ -36,11 +36,7 @@ if($_SERVER['REQUEST_METHOD']=== 'POST'){
         }
     } catch(PDOException $e){
         // verifica se o erro é de email duplicado (comum em cadastros)
-        if($e->getCode()==2300){
-            echo "Erro: Este email já está cadastrado.";
-        } else{
-            echo "Erro no banco de dados: ". $e->getMessage();
-        }
+       die($e->getMessage());
     }
 } else{
     echo "Acesso inválido.";

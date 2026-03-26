@@ -3,7 +3,7 @@
 session_start();
 
 // Importa a conexão com o banco
-require 'conexao.php';
+require "conexao.php";
 
 // Verifica se os dados vieram via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,26 +27,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Pegamos o resultado (fetch)
         $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // 3. Verificar se o usuário existe E se a senha bate
-        if ($usuario && password_verify($senha, $usuario['senha'])) {
-            
-            // 4. EMISSÃO DO CRACHÁ: Guardando dados na Sessão
+        if ($usuario && password_verify($senha, $usuario['senha_hash'])) {
+    
+            // 4. EMISSÃO DO CRACHÁ: Agora usando 'autor' como você definiu
+           // Dentro do login.php, onde o login dá certo:
             $_SESSION['id_usuario']   = $usuario['id'];
-            $_SESSION['autor_usuario'] = $usuario['autor'];
+            $_SESSION['nome_usuario'] = $usuario['autor']; // O nome que veio da coluna 'autor' // Pega da coluna 'autor' do banco
             $_SESSION['logado']       = true;
-
-            // 5. Retorno de Sucesso
+        
             echo json_encode([
                 'status' => 'sucesso', 
                 'mensagem' => 'Login realizado! Bem-vindo, ' . $usuario['autor']
             ]);
-
+        
         } else {
-            // Se o e-mail não existir OU a senha estiver errada, caímos aqui
-            // Dica: Mensagem genérica para não dar pistas a hackers
             echo json_encode(['status' => 'erro', 'mensagem' => 'E-mail ou senha incorretos.']);
         }
-
     } catch (PDOException $e) {
         echo json_encode(['status' => 'erro', 'mensagem' => 'Erro no servidor.']);
     }
